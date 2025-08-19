@@ -17,7 +17,28 @@ app.use(express.json());
 
 // Initialize SQLite database
 const dbPath = path.join(process.env.PDS_DATA_DIR || '/app/data', 'pds.db');
-const db = new sqlite3.Database(dbPath);
+const dbDir = path.dirname(dbPath);
+
+// Ensure data directory exists
+try {
+  if (!require('fs').existsSync(dbDir)) {
+    require('fs').mkdirSync(dbDir, { recursive: true });
+  }
+} catch (error) {
+  console.warn('Warning: Could not create data directory:', error.message);
+}
+
+let db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Error opening database:', err.message);
+    // Try to create the database in a fallback location
+    const fallbackPath = '/tmp/pds.db';
+    console.log(`Trying fallback database path: ${fallbackPath}`);
+    db = new sqlite3.Database(fallbackPath);
+  } else {
+    console.log('Connected to SQLite database:', dbPath);
+  }
+});
 
 // Create tables if they don't exist
 db.serialize(() => {

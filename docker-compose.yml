@@ -25,8 +25,8 @@ services:
     env_file:
       - ./packages/pds/sfproject.env
     volumes:
-      - ./data:/app/data
-      - ./blobs:/app/blobs
+      - pds_data:/app/data
+      - pds_blobs:/app/blobs
     depends_on:
       - postgres
     restart: unless-stopped
@@ -80,3 +80,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  pds_data:
+  pds_blobs:
