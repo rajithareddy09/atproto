@@ -7,7 +7,16 @@
     "start": "node api.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "@atproto/bsky": "workspace:^",
+    "@atproto/crypto": "workspace:^",
+    "@atproto/xrpc": "workspace:^",
+    "@atproto/xrpc-server": "workspace:^",
+    "@atproto/lexicon": "workspace:^",
+    "@atproto/common": "workspace:^",
+    "@atproto/common-web": "workspace:^",
+    "@atproto/repo": "workspace:^",
+    "@atproto/sync": "workspace:^",
+    "@atproto/identity": "workspace:^",
+    "dd-trace": "3.13.2"
   }
 }

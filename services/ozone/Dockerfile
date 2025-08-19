@@ -1,28 +1,62 @@
-FROM node:20.11-alpine3.18
+# @NOTE just a temp fix: alpine3.19 breaks sharp install, see nodejs/docker-node#2009
+# see additional reference to this image further down.
+FROM node:18-alpine as build
 
-RUN apk add --update dumb-init
+RUN corepack enable
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
+COPY ./package.json ./
+RUN corepack prepare --activate
 
-# Install dependencies
-RUN npm install -g pnpm
-RUN pnpm install
+# Move files into the image and install
+COPY ./*.* ./
+# NOTE ozones's transitive dependencies go here: if that changes, this needs to be updated.
+COPY ./tsconfig ./tsconfig
+COPY ./packages/ozone ./packages/ozone
+COPY ./packages/api ./packages/api
+COPY ./packages/aws ./packages/aws
+COPY ./packages/common ./packages/common
+COPY ./packages/common-web ./packages/common-web
+COPY ./packages/crypto ./packages/crypto
+COPY ./packages/identity ./packages/identity
+COPY ./packages/repo ./packages/repo
+COPY ./packages/syntax ./packages/syntax
+COPY ./packages/lexicon ./packages/lexicon
+COPY ./packages/xrpc ./packages/xrpc
+COPY ./packages/xrpc-server ./packages/xrpc-server
+COPY ./services/ozone ./services/ozone
 
-# Copy the Ozone service files
-COPY . .
+# install all deps
+RUN pnpm install --frozen-lockfile > /dev/null
+# build all packages with external node_modules
+RUN pnpm build > /dev/null
+# clean up
+RUN rm -rf node_modules
+# install only prod deps, hoisted to root node_modules dir
+RUN pnpm install --prod --shamefully-hoist --frozen-lockfile --prefer-offline > /dev/null
+
+WORKDIR services/ozone
+
+# Uses assets from build stage to reduce build size
+FROM node:18-alpine
+
+RUN apk add --update dumb-init
+
+# Avoid zombie processes, handle signal forwarding
+ENTRYPOINT ["dumb-init", "--"]
+
+WORKDIR /app/services/ozone
+COPY --from=build /app /app
 
 EXPOSE 3000
 ENV OZONE_PORT=3000
 ENV NODE_ENV=production
 
-# Avoid zombie processes, handle signal forwarding
-ENTRYPOINT ["dumb-init", "--"]
-
+# https://github.com/nodejs/docker-node/blob/master/docs/BestPractices.md#non-root-user
 USER node
-CMD ["node", "api.js"]
+CMD ["node", "--enable-source-maps", "api.js"]
 
-LABEL org.opencontainers.image.description="Ozone Moderation Service"
+LABEL org.opencontainers.image.source=https://github.com/bluesky-social/atproto
+LABEL org.opencontainers.image.description="Ozone"
 LABEL org.opencontainers.image.licenses=MIT
