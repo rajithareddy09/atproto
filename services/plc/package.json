@@ -7,6 +7,6 @@
     "start": "node api.js"
   },
   "dependencies": {
-    "@did-plc/server": "workspace:^"
+    "@did-plc/server": "^0.0.1"
   }
 }
