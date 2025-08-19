@@ -33,7 +33,7 @@ app.get('/xrpc/com.atproto.server.describeServer', (req, res) => {
 app.get('/xrpc/app.bsky.feed.getTimeline', (req, res) => {
   try {
     const { limit = 20, cursor } = req.query;
-    
+
     // Mock timeline data
     const timeline = {
       feed: [],
@@ -61,7 +61,7 @@ app.get('/xrpc/app.bsky.feed.getTimeline', (req, res) => {
 app.get('/xrpc/app.bsky.feed.getPostThread', (req, res) => {
   try {
     const { uri } = req.query;
-    
+
     if (!uri) {
       return res.status(400).json({ error: 'Missing URI parameter' });
     }
@@ -96,7 +96,7 @@ app.get('/xrpc/app.bsky.feed.getPostThread', (req, res) => {
 app.get('/xrpc/app.bsky.feed.getAuthorFeed', (req, res) => {
   try {
     const { actor, limit = 20, cursor } = req.query;
-    
+
     if (!actor) {
       return res.status(400).json({ error: 'Missing actor parameter' });
     }
