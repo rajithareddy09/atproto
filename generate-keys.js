@@ -20,10 +20,11 @@ const plcAdminPassword = crypto.randomBytes(16).toString('hex');
 const ozoneSigningKey = crypto.randomBytes(32).toString('hex');
 const plcSigningKey = crypto.randomBytes(32).toString('hex');
 
-// Generate service signing key (did:key format)
+// Generate service signing key (simplified did:key format)
+// Using base64 encoding instead of base58btc for compatibility
 const serviceSigningKeyBytes = crypto.randomBytes(32);
-const serviceSigningKeyMultibase = 'z' + serviceSigningKeyBytes.toString('base58btc');
-const serviceSigningKey = `did:key:${serviceSigningKeyMultibase}`;
+const serviceSigningKeyBase64 = serviceSigningKeyBytes.toString('base64').replace(/\+/g, '').replace(/\//g, '').replace(/=/g, '');
+const serviceSigningKey = `did:key:z${serviceSigningKeyBase64}`;
 
 console.log('📋 PDS Keys:');
 console.log('-------------');
