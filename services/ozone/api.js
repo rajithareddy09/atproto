@@ -2,23 +2,13 @@
 
 'use strict'
 
-const { registerInstrumentations } = require('@opentelemetry/instrumentation')
-const {
-  BetterSqlite3Instrumentation,
-} = require('opentelemetry-plugin-better-sqlite3')
-const { TracerProvider } = require('dd-trace') // Only works with commonjs
-  .init({ logInjection: true })
+const dd = require('dd-trace')
+
+dd.tracer
+  .init()
   .use('express', {
     hooks: { request: maintainXrpcResource },
   })
-
-const tracer = new TracerProvider()
-tracer.register()
-
-registerInstrumentations({
-  tracerProvider: tracer,
-  instrumentations: [new BetterSqlite3Instrumentation()],
-})
 
 const path = require('node:path')
 
@@ -39,11 +29,6 @@ function maintainXrpcResource(span, req) {
 
 // Tracer code above must come before anything else
 const {
-  BunnyInvalidator,
-  CloudfrontInvalidator,
-  MultiImageInvalidator,
-} = require('@atproto/aws')
-const {
   Database,
   OzoneService,
   envToCfg,
@@ -57,36 +42,6 @@ const main = async () => {
   const cfg = envToCfg(env)
   const secrets = envToSecrets(env)
 
-  // configure zero, one, or more image invalidators
-  const imgUriEndpoint = process.env.OZONE_IMG_URI_ENDPOINT
-  const bunnyAccessKey = process.env.OZONE_BUNNY_ACCESS_KEY
-  const cfDistributionId = process.env.OZONE_CF_DISTRIBUTION_ID
-
-  const imgInvalidators = []
-
-  if (bunnyAccessKey) {
-    imgInvalidators.push(
-      new BunnyInvalidator({
-        accessKey: bunnyAccessKey,
-        urlPrefix: imgUriEndpoint,
-      }),
-    )
-  }
-
-  if (cfDistributionId) {
-    imgInvalidators.push(
-      new CloudfrontInvalidator({
-        distributionId: cfDistributionId,
-        pathPrefix: imgUriEndpoint && new URL(imgUriEndpoint).pathname,
-      }),
-    )
-  }
-
-  const imgInvalidator =
-    imgInvalidators.length > 1
-      ? new MultiImageInvalidator(imgInvalidators)
-      : imgInvalidators[0]
-
   const migrate = process.env.OZONE_DB_MIGRATE === '1'
   if (migrate) {
     const db = new Database({
@@ -97,7 +52,7 @@ const main = async () => {
     await db.close()
   }
 
-  const ozone = await OzoneService.create(cfg, secrets, { imgInvalidator })
+  const ozone = await OzoneService.create(cfg, secrets)
 
   await ozone.start()
 

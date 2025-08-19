@@ -8,7 +8,6 @@
   },
   "dependencies": {
     "@atproto/ozone": "workspace:^",
-    "@atproto/aws": "workspace:^",
     "@atproto/xrpc": "workspace:^",
     "@atproto/xrpc-server": "workspace:^",
     "@atproto/lexicon": "workspace:^",

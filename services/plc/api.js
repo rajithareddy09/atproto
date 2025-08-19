@@ -1,7 +1,7 @@
 'use strict'
 
-const { PlcServer } = require('@atproto/did-plc')
-const { Database } = require('@atproto/did-plc')
+const { PlcServer } = require('@did-plc/server')
+const { Database } = require('@did-plc/server')
 
 const port = process.env.PLC_PORT || 2582
 const dbUrl = process.env.PLC_DB_POSTGRES_URL
