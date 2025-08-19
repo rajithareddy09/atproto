@@ -51,3 +51,26 @@ nvm-setup: ## Use NVM to install and activate node+pnpm
 	nvm install 18
 	nvm use 18
 	corepack enable
+
+.PHONY: start-services
+start-services: ## Start all atproto services using dev-env (no Docker)
+	@echo "🚀 Starting SF Project PDS using dev-env..."
+	@chmod +x start-services.sh
+	@./start-services.sh
+
+.PHONY: start-pds
+start-pds: ## Start PDS service only
+	@echo "🌐 Starting PDS service..."
+	cd packages/dev-env && pnpm start
+
+.PHONY: stop-docker
+stop-docker: ## Stop Docker services if running
+	@echo "🛑 Stopping Docker services..."
+	docker-compose down
+
+.PHONY: clean
+clean: ## Clean build artifacts
+	@echo "🧹 Cleaning build artifacts..."
+	pnpm clean
+	rm -rf node_modules
+	rm -rf packages/*/node_modules

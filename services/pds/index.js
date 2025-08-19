@@ -399,6 +399,296 @@ app.get('/xrpc/com.atproto.sync.getRepo', (req, res) => {
   }
 });
 
+// 7. Get Profile
+app.get('/xrpc/app.bsky.actor.getProfile', (req, res) => {
+  try {
+    const { actor } = req.query;
+    
+    if (!actor) {
+      return res.status(400).json({ error: 'Missing actor parameter' });
+    }
+
+    // Mock profile data
+    const profile = {
+      did: actor.startsWith('did:') ? actor : `did:web:${actor}.sfproject.net`,
+      handle: actor.startsWith('did:') ? actor.split(':').pop() : actor,
+      displayName: `User ${actor}`,
+      description: 'A user on SF Project PDS',
+      avatar: null,
+      banner: null,
+      followsCount: Math.floor(Math.random() * 100),
+      followersCount: Math.floor(Math.random() * 100),
+      postsCount: Math.floor(Math.random() * 50),
+      indexedAt: new Date().toISOString()
+    };
+
+    res.json(profile);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 8. Get Follows
+app.get('/xrpc/app.bsky.graph.getFollows', (req, res) => {
+  try {
+    const { actor, limit = 20, cursor } = req.query;
+    
+    if (!actor) {
+      return res.status(400).json({ error: 'Missing actor parameter' });
+    }
+
+    // Mock follows data
+    const follows = {
+      subject: {
+        did: actor,
+        handle: actor.split(':').pop() || actor
+      },
+      follows: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock follows
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      follows.follows.push({
+        did: `did:web:user${i}.sfproject.net`,
+        handle: `user${i}.sfproject.net`,
+        displayName: `User ${i}`,
+        avatar: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(follows);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 9. Get Followers
+app.get('/xrpc/app.bsky.graph.getFollowers', (req, res) => {
+  try {
+    const { actor, limit = 20, cursor } = req.query;
+    
+    if (!actor) {
+      return res.status(400).json({ error: 'Missing actor parameter' });
+    }
+
+    // Mock followers data
+    const followers = {
+      subject: {
+        did: actor,
+        handle: actor.split(':').pop() || actor
+      },
+      followers: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock followers
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      followers.followers.push({
+        did: `did:web:follower${i}.sfproject.net`,
+        handle: `follower${i}.sfproject.net`,
+        displayName: `Follower ${i}`,
+        avatar: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(followers);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 10. Get Posts
+app.get('/xrpc/app.bsky.feed.getAuthorFeed', (req, res) => {
+  try {
+    const { actor, limit = 20, cursor } = req.query;
+    
+    if (!actor) {
+      return res.status(400).json({ error: 'Missing actor parameter' });
+    }
+
+    // Mock feed data
+    const feed = {
+      feed: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock posts
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      feed.feed.push({
+        post: `at://${actor}/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        reply: null,
+        repost: null,
+        like: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(feed);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 11. Get Post Thread
+app.get('/xrpc/app.bsky.feed.getPostThread', (req, res) => {
+  try {
+    const { uri } = req.query;
+    
+    if (!uri) {
+      return res.status(400).json({ error: 'Missing URI parameter' });
+    }
+
+    // Mock thread data
+    const thread = {
+      thread: {
+        post: {
+          uri: uri,
+          cid: crypto.randomBytes(16).toString('hex'),
+          author: {
+            did: uri.split('/')[2],
+            handle: uri.split('/')[2].replace('did:web:', '')
+          },
+          record: {
+            text: 'This is a mock post from SF Project PDS',
+            createdAt: new Date().toISOString()
+          },
+          indexedAt: new Date().toISOString()
+        },
+        replies: []
+      }
+    };
+
+    res.json(thread);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 12. Get Suggestions
+app.get('/xrpc/app.bsky.actor.getSuggestions', (req, res) => {
+  try {
+    const { limit = 20, cursor } = req.query;
+    
+    // Mock suggestions data
+    const suggestions = {
+      actors: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock suggestions
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      suggestions.actors.push({
+        did: `did:web:suggested${i}.sfproject.net`,
+        handle: `suggested${i}.sfproject.net`,
+        displayName: `Suggested User ${i}`,
+        description: 'A suggested user to follow',
+        avatar: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(suggestions);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 13. Search Users
+app.get('/xrpc/app.bsky.actor.searchActors', (req, res) => {
+  try {
+    const { q, limit = 20, cursor } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({ error: 'Missing query parameter' });
+    }
+
+    // Mock search results
+    const results = {
+      actors: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock search results
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      results.actors.push({
+        did: `did:web:search${i}.sfproject.net`,
+        handle: `search${i}.sfproject.net`,
+        displayName: `Search Result ${i}`,
+        description: `User matching "${q}"`,
+        avatar: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 14. Get Notifications
+app.get('/xrpc/app.bsky.notification.listNotifications', (req, res) => {
+  try {
+    const { limit = 20, cursor } = req.query;
+    
+    // Mock notifications data
+    const notifications = {
+      notifications: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock notifications
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      notifications.notifications.push({
+        uri: `at://did:web:user${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        cid: crypto.randomBytes(16).toString('hex'),
+        author: {
+          did: `did:web:user${i}.sfproject.net`,
+          handle: `user${i}.sfproject.net`
+        },
+        reason: 'follow',
+        reasonSubject: null,
+        record: {
+          text: 'Mock notification content'
+        },
+        isRead: false,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 15. Get Preferences
+app.get('/xrpc/app.bsky.actor.getPreferences', (req, res) => {
+  try {
+    // Mock preferences data
+    const preferences = {
+      preferences: [
+        {
+          $type: 'app.bsky.actor.defs#adultContentPref',
+          enabled: false
+        },
+        {
+          $type: 'app.bsky.actor.defs#contentLabelPref',
+          label: 'hide',
+          visibility: 'hide'
+        }
+      ]
+    };
+
+    res.json(preferences);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'pds', timestamp: new Date().toISOString() });
