@@ -18,7 +18,7 @@ services:
 
   # PDS Service
   pds:
-    build: ./packages/pds
+    build: ./services/pds
     container_name: sfproject-pds
     ports:
       - "2583:2583"
@@ -45,7 +45,7 @@ services:
 
   # Ozone Moderation Service
   ozone:
-    build: ./packages/ozone
+    build: ./services/ozone
     container_name: sfproject-ozone
     ports:
       - "3000:3000"
