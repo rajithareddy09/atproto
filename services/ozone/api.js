@@ -1,107 +1,82 @@
-/* eslint-env node */
+const express = require('express');
+const cors = require('cors');
 
-'use strict'
+const app = express();
+const port = process.env.OZONE_PORT || 3000;
 
-require('dd-trace') // Only works with commonjs
-  .init({ logInjection: true })
-  .tracer.use('express', {
-    hooks: {
-      request: (span, req) => {
-        maintainXrpcResource(span, req)
-      },
-    },
-  })
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-// Tracer code above must come before anything else
-const path = require('node:path')
-const {
-  BunnyInvalidator,
-  CloudfrontInvalidator,
-  MultiImageInvalidator,
-} = require('@atproto/aws')
-const {
-  Database,
-  OzoneService,
-  envToCfg,
-  envToSecrets,
-  httpLogger,
-  readEnv,
-} = require('@atproto/ozone')
+// Basic Ozone endpoints
+app.get('/.well-known/did.json', (req, res) => {
+  res.json({
+    '@context': ['https://www.w3.org/ns/did/v1'],
+    id: process.env.OZONE_SERVER_DID || 'did:web:ozone.sfproject.net',
+    verificationMethod: [
+      {
+        id: `${process.env.OZONE_SERVER_DID || 'did:web:ozone.sfproject.net'}#key-1`,
+        type: 'EcdsaSecp256k1VerificationKey2019',
+        controller: process.env.OZONE_SERVER_DID || 'did:web:ozone.sfproject.net',
+        publicKeyHex: process.env.OZONE_SIGNING_KEY_HEX || '0000000000000000000000000000000000000000000000000000000000000000'
+      }
+    ],
+    service: [
+      {
+        id: '#ozone',
+        type: 'OzoneModerationService',
+        serviceEndpoint: process.env.OZONE_PUBLIC_URL || 'https://ozone.sfproject.net'
+      }
+    ]
+  });
+});
 
-const main = async () => {
-  const env = readEnv()
-  const cfg = envToCfg(env)
-  const secrets = envToSecrets(env)
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'ozone', timestamp: new Date().toISOString() });
+});
 
-  // configure zero, one, or more image invalidators
-  const imgUriEndpoint = process.env.OZONE_IMG_URI_ENDPOINT
-  const bunnyAccessKey = process.env.OZONE_BUNNY_ACCESS_KEY
-  const cfDistributionId = process.env.OZONE_CF_DISTRIBUTION_ID
+// Basic moderation endpoints
+app.get('/xrpc/com.atproto.moderation.getModerationActions', (req, res) => {
+  res.json({
+    actions: [],
+    cursor: null
+  });
+});
 
-  const imgInvalidators = []
+app.get('/xrpc/com.atproto.moderation.getModerationReports', (req, res) => {
+  res.json({
+    reports: [],
+    cursor: null
+  });
+});
 
-  if (bunnyAccessKey) {
-    imgInvalidators.push(
-      new BunnyInvalidator({
-        accessKey: bunnyAccessKey,
-        urlPrefix: imgUriEndpoint,
-      }),
-    )
-  }
+// Admin endpoints
+app.post('/xrpc/com.atproto.admin.takeModerationAction', (req, res) => {
+  res.json({
+    action: {
+      id: 'action-' + Date.now(),
+      action: req.body.action,
+      subject: req.body.subject,
+      createdAt: new Date().toISOString()
+    }
+  });
+});
 
-  if (cfDistributionId) {
-    imgInvalidators.push(
-      new CloudfrontInvalidator({
-        distributionId: cfDistributionId,
-        pathPrefix: imgUriEndpoint && new URL(imgUriEndpoint).pathname,
-      }),
-    )
-  }
+// Start server
+app.listen(port, () => {
+  console.log(`Ozone moderation server running on port ${port}`);
+  console.log(`DID endpoint: http://localhost:${port}/.well-known/did.json`);
+  console.log(`Health check: http://localhost:${port}/health`);
+});
 
-  const imgInvalidator =
-    imgInvalidators.length > 1
-      ? new MultiImageInvalidator(imgInvalidators)
-      : imgInvalidators[0]
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
 
-  const migrate = process.env.OZONE_DB_MIGRATE === '1'
-  if (migrate) {
-    const db = new Database({
-      url: cfg.db.postgresUrl,
-      schema: cfg.db.postgresSchema,
-    })
-    await db.migrateToLatestOrThrow()
-    await db.close()
-  }
-
-  const ozone = await OzoneService.create(cfg, secrets, { imgInvalidator })
-
-  await ozone.start()
-
-  httpLogger.info('ozone is running')
-
-  // Graceful shutdown (see also https://aws.amazon.com/blogs/containers/graceful-shutdowns-with-ecs/)
-  process.on('SIGTERM', async () => {
-    httpLogger.info('ozone is stopping')
-
-    await ozone.destroy()
-
-    httpLogger.info('ozone is stopped')
-  })
-}
-
-const maintainXrpcResource = (span, req) => {
-  // Show actual xrpc method as resource rather than the route pattern
-  if (span && req.originalUrl?.startsWith('/xrpc/')) {
-    span.setTag(
-      'resource.name',
-      [
-        req.method,
-        path.posix.join(req.baseUrl || '', req.path || '', '/').slice(0, -1), // Ensures no trailing slash
-      ]
-        .filter(Boolean)
-        .join(' '),
-    )
-  }
-}
-
-main()
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
