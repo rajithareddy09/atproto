@@ -111,7 +111,7 @@ app.get('/xrpc/com.atproto.server.describeServer', (req, res) => {
 app.post('/xrpc/com.atproto.server.createAccount', async (req, res) => {
   try {
     const { email, password, handle } = req.body;
-    
+
     if (!email || !password || !handle) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -132,7 +132,7 @@ app.post('/xrpc/com.atproto.server.createAccount', async (req, res) => {
         }
 
         const did = generateDid(handle);
-        
+
         // Insert user
         db.run(
           'INSERT INTO users (did, handle, email, password_hash) VALUES (?, ?, ?, ?)',
@@ -178,14 +178,14 @@ app.post('/xrpc/com.atproto.server.createAccount', async (req, res) => {
 app.post('/xrpc/com.atproto.server.createSession', async (req, res) => {
   try {
     const { identifier, password } = req.body;
-    
+
     if (!identifier || !password) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Find user by handle or email
-    db.get('SELECT id, did, handle, password_hash FROM users WHERE handle = ? OR email = ?', 
-      [identifier, identifier], 
+    db.get('SELECT id, did, handle, password_hash FROM users WHERE handle = ? OR email = ?',
+      [identifier, identifier],
       (err, user) => {
         if (err) {
           return res.status(500).json({ error: 'Database error' });
@@ -202,14 +202,14 @@ app.post('/xrpc/com.atproto.server.createSession', async (req, res) => {
 
           // Create session
           const accessJwt = jwt.sign(
-            { userId: user.id, did: user.did, handle: user.handle }, 
-            process.env.PDS_JWT_SECRET || 'your-secret-key', 
+            { userId: user.id, did: user.did, handle: user.handle },
+            process.env.PDS_JWT_SECRET || 'your-secret-key',
             { expiresIn: '1h' }
           );
-          
+
           const refreshJwt = jwt.sign(
-            { userId: user.id, did: user.did, handle: user.handle }, 
-            process.env.PDS_JWT_SECRET || 'your-secret-key', 
+            { userId: user.id, did: user.did, handle: user.handle },
+            process.env.PDS_JWT_SECRET || 'your-secret-key',
             { expiresIn: '7d' }
           );
 
@@ -231,14 +231,14 @@ app.post('/xrpc/com.atproto.server.createSession', async (req, res) => {
 app.post('/xrpc/com.atproto.repo.createRecord', authenticateToken, (req, res) => {
   try {
     const { repo, collection, rkey, record } = req.body;
-    
+
     if (!repo || !collection || !rkey || !record) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Find repository
-    db.get('SELECT id FROM repositories WHERE name = ? AND user_id = ?', 
-      [repo, req.user.userId], 
+    db.get('SELECT id FROM repositories WHERE name = ? AND user_id = ?',
+      [repo, req.user.userId],
       (err, repoRow) => {
         if (err) {
           return res.status(500).json({ error: 'Database error' });
@@ -273,7 +273,7 @@ app.post('/xrpc/com.atproto.repo.createRecord', authenticateToken, (req, res) =>
 app.get('/xrpc/com.atproto.repo.getRecord', (req, res) => {
   try {
     const { uri } = req.query;
-    
+
     if (!uri) {
       return res.status(400).json({ error: 'Missing URI parameter' });
     }
@@ -296,8 +296,8 @@ app.get('/xrpc/com.atproto.repo.getRecord', (req, res) => {
       }
 
       // Find repository
-      db.get('SELECT id FROM repositories WHERE user_id = ? AND name = ?', 
-        [user.id, 'main'], 
+      db.get('SELECT id FROM repositories WHERE user_id = ? AND name = ?',
+        [user.id, 'main'],
         (err, repo) => {
           if (err) {
             return res.status(500).json({ error: 'Database error' });
@@ -307,8 +307,8 @@ app.get('/xrpc/com.atproto.repo.getRecord', (req, res) => {
           }
 
           // Find record
-          db.get('SELECT data FROM records WHERE repo_id = ? AND collection = ? AND rkey = ?', 
-            [repo.id, collection, rkey], 
+          db.get('SELECT data FROM records WHERE repo_id = ? AND collection = ? AND rkey = ?',
+            [repo.id, collection, rkey],
             (err, record) => {
               if (err) {
                 return res.status(500).json({ error: 'Database error' });
@@ -336,7 +336,7 @@ app.get('/xrpc/com.atproto.repo.getRecord', (req, res) => {
 app.get('/xrpc/com.atproto.sync.getRepo', (req, res) => {
   try {
     const { did } = req.query;
-    
+
     if (!did) {
       return res.status(400).json({ error: 'Missing DID parameter' });
     }
@@ -351,8 +351,8 @@ app.get('/xrpc/com.atproto.sync.getRepo', (req, res) => {
       }
 
       // Get all records for the user's repository
-      db.all('SELECT r.collection, r.rkey, r.data FROM records r JOIN repositories repo ON r.repo_id = repo.id WHERE repo.user_id = ?', 
-        [user.id], 
+      db.all('SELECT r.collection, r.rkey, r.data FROM records r JOIN repositories repo ON r.repo_id = repo.id WHERE repo.user_id = ?',
+        [user.id],
         (err, records) => {
           if (err) {
             return res.status(500).json({ error: 'Database error' });

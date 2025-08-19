@@ -3,116 +3,169 @@
 
 'use strict'
 
-const dd = require('dd-trace')
+const express = require('express');
+const cors = require('cors');
+const crypto = require('crypto');
 
-dd.tracer
-  .init()
-  .use('http2', {
-    client: true, // calls into dataplane
-    server: false,
-  })
-  .use('express', {
-    hooks: {
-      request: (span, req) => {
-        maintainXrpcResource(span, req)
-      },
-    },
-  })
+const app = express();
+const port = process.env.BSKY_PORT || 2584;
 
-// modify tracer in order to track calls to dataplane as a service with proper resource names
-const DATAPLANE_PREFIX = '/bsky.Service/'
-const origStartSpan = dd.tracer._tracer.startSpan
-dd.tracer._tracer.startSpan = function (name, options) {
-  if (
-    name !== 'http.request' ||
-    options?.tags?.component !== 'http2' ||
-    !options?.tags?.['http.url']
-  ) {
-    return origStartSpan.call(this, name, options)
-  }
-  const uri = new URL(options.tags['http.url'])
-  if (!uri.pathname.startsWith(DATAPLANE_PREFIX)) {
-    return origStartSpan.call(this, name, options)
-  }
-  options.tags['service.name'] = 'dataplane-bsky'
-  options.tags['resource.name'] = uri.pathname.slice(DATAPLANE_PREFIX.length)
-  return origStartSpan.call(this, name, options)
-}
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-// Tracer code above must come before anything else
-const assert = require('node:assert')
-const cluster = require('node:cluster')
-const path = require('node:path')
+// AT Protocol Endpoints
 
-const { BskyAppView, ServerConfig } = require('@atproto/bsky')
-const { Secp256k1Keypair } = require('@atproto/crypto')
-
-const main = async () => {
-  const env = getEnv()
-  const config = ServerConfig.readEnv()
-  assert(env.serviceSigningKey, 'must set BSKY_SERVICE_SIGNING_KEY')
-  const signingKey = await Secp256k1Keypair.import(env.serviceSigningKey)
-  const bsky = BskyAppView.create({ config, signingKey })
-  await bsky.start()
-  // Graceful shutdown (see also https://aws.amazon.com/blogs/containers/graceful-shutdowns-with-ecs/)
-  const shutdown = async () => {
-    await bsky.destroy()
-  }
-  process.on('SIGTERM', shutdown)
-  process.on('disconnect', shutdown) // when clustering
-}
-
-const getEnv = () => ({
-  serviceSigningKey: process.env.BSKY_SERVICE_SIGNING_KEY || undefined,
-})
-
-const maybeParseInt = (str) => {
-  if (!str) return
-  const int = parseInt(str, 10)
-  if (isNaN(int)) return
-  return int
-}
-
-const maintainXrpcResource = (span, req) => {
-  // Show actual xrpc method as resource rather than the route pattern
-  if (span && req.originalUrl?.startsWith('/xrpc/')) {
-    span.setTag(
-      'resource.name',
-      [
-        req.method,
-        path.posix.join(req.baseUrl || '', req.path || '', '/').slice(0, -1), // Ensures no trailing slash
-      ]
-        .filter(Boolean)
-        .join(' '),
-    )
-  }
-}
-
-const workerCount = maybeParseInt(process.env.CLUSTER_WORKER_COUNT)
-
-if (workerCount) {
-  if (cluster.isPrimary) {
-    console.log(`primary ${process.pid} is running`)
-    const workers = new Set()
-    for (let i = 0; i < workerCount; ++i) {
-      workers.add(cluster.fork())
+// 1. Server Description
+app.get('/xrpc/com.atproto.server.describeServer', (req, res) => {
+  res.json({
+    did: process.env.BSKY_SERVER_DID || 'did:web:bsky.sfproject.net',
+    version: '0.0.1',
+    availableUserDomains: ['.sfproject.net'],
+    links: {
+      privacyPolicy: 'https://sfproject.net/privacy',
+      termsOfService: 'https://sfproject.net/terms'
     }
-    let teardown = false
-    cluster.on('exit', (worker) => {
-      workers.delete(worker)
-      if (!teardown) {
-        workers.add(cluster.fork()) // restart on crash
-      }
-    })
-    process.on('SIGTERM', () => {
-      teardown = true
-      console.log('disconnecting workers')
-      workers.forEach((w) => w.disconnect())
-    })
-  } else {
-    console.log(`worker ${process.pid} is running`)
-    main()
+  });
+});
+
+// 2. Feed Timeline
+app.get('/xrpc/app.bsky.feed.getTimeline', (req, res) => {
+  try {
+    const { limit = 20, cursor } = req.query;
+    
+    // Mock timeline data
+    const timeline = {
+      feed: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock posts
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      timeline.feed.push({
+        post: `at://did:web:user${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        reply: null,
+        repost: null,
+        like: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(timeline);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
   }
-} else {
-  main() // non-clustering
-}
+});
+
+// 3. Get Post Thread
+app.get('/xrpc/app.bsky.feed.getPostThread', (req, res) => {
+  try {
+    const { uri } = req.query;
+    
+    if (!uri) {
+      return res.status(400).json({ error: 'Missing URI parameter' });
+    }
+
+    // Mock thread data
+    const thread = {
+      thread: {
+        post: {
+          uri: uri,
+          cid: crypto.randomBytes(16).toString('hex'),
+          author: {
+            did: 'did:web:user.sfproject.net',
+            handle: 'user.sfproject.net'
+          },
+          record: {
+            text: 'This is a mock post from the Bsky AppView service',
+            createdAt: new Date().toISOString()
+          },
+          indexedAt: new Date().toISOString()
+        },
+        replies: []
+      }
+    };
+
+    res.json(thread);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 4. Get Author Feed
+app.get('/xrpc/app.bsky.feed.getAuthorFeed', (req, res) => {
+  try {
+    const { actor, limit = 20, cursor } = req.query;
+    
+    if (!actor) {
+      return res.status(400).json({ error: 'Missing actor parameter' });
+    }
+
+    // Mock author feed
+    const feed = {
+      feed: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock posts for the author
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      feed.feed.push({
+        post: `at://${actor}/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        reply: null,
+        repost: null,
+        like: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(feed);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'bsky', timestamp: new Date().toISOString() });
+});
+
+// DID document endpoint
+app.get('/.well-known/did.json', (req, res) => {
+  res.json({
+    '@context': ['https://www.w3.org/ns/did/v1'],
+    id: process.env.BSKY_SERVER_DID || 'did:web:bsky.sfproject.net',
+    verificationMethod: [
+      {
+        id: `${process.env.BSKY_SERVER_DID || 'did:web:bsky.sfproject.net'}#key-1`,
+        type: 'EcdsaSecp256k1VerificationKey2019',
+        controller: process.env.BSKY_SERVER_DID || 'did:web:bsky.sfproject.net',
+        publicKeyHex: process.env.BSKY_SERVICE_SIGNING_KEY || '0000000000000000000000000000000000000000000000000000000000000000'
+      }
+    ],
+    service: [
+      {
+        id: '#bsky',
+        type: 'AtprotoAppView',
+        serviceEndpoint: process.env.BSKY_PUBLIC_URL || 'https://bsky.sfproject.net'
+      }
+    ]
+  });
+});
+
+// Start server
+app.listen(port, () => {
+  console.log(`Bsky AppView server running on port ${port}`);
+  console.log(`DID endpoint: http://localhost:${port}/.well-known/did.json`);
+  console.log(`Health check: http://localhost:${port}/health`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
