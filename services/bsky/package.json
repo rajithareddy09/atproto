@@ -2,9 +2,12 @@
   "name": "bsky-app-view-service",
   "private": true,
   "packageManager": "pnpm@8.15.9",
+  "scripts": {
+    "build": "echo 'Bsky service built'",
+    "start": "node api.js"
+  },
   "dependencies": {
-    "@atproto/bsky": "workspace:^",
-    "@atproto/crypto": "workspace:^",
-    "dd-trace": "3.13.2"
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
   }
 }
