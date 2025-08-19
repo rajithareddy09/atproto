@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: sfproject-postgres
+    environment:
+      POSTGRES_PASSWORD: atproto_user
+      POSTGRES_USER: atproto_user
+      POSTGRES_DB: ozone
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database-setup.sql:/docker-entrypoint-initdb.d/01-setup.sql
+    restart: unless-stopped
+
+  # PDS Service
+  pds:
+    build: ./packages/pds
+    container_name: sfproject-pds
+    ports:
+      - "2583:2583"
+    env_file:
+      - ./packages/pds/sfproject.env
+    volumes:
+      - ./data:/app/data
+      - ./blobs:/app/blobs
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Bsky AppView Service
+  bsky:
+    build: ./services/bsky
+    container_name: sfproject-bsky
+    ports:
+      - "2584:2584"
+    env_file:
+      - ./services/bsky/sfproject.env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Ozone Moderation Service
+  ozone:
+    build: ./packages/ozone
+    container_name: sfproject-ozone
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./packages/ozone/sfproject.env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # PLC Service
+  plc:
+    build: ./services/plc
+    container_name: sfproject-plc
+    ports:
+      - "2582:2582"
+    env_file:
+      - ./services/plc/sfproject.env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Optional: Redis (if you want to add caching)
+  redis:
+    image: redis:7-alpine
+    container_name: sfproject-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

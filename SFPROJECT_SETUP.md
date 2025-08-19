@@ -93,7 +93,64 @@ PLC_SIGNING_KEY_HEX="your-64-char-hex-signing-key"
 
 ## Step 3: Database Setup
 
-### Create PostgreSQL Databases
+### Required Databases
+
+**PostgreSQL** (Required):
+- **Ozone**: Uses PostgreSQL for moderation data
+- **PLC**: Uses PostgreSQL for DID management
+
+**SQLite** (Automatic):
+- **PDS**: Uses SQLite files (no separate database server needed)
+
+**Redis** (Optional):
+- Not required by default, but can be added for caching
+
+### Option 1: Using Docker (Recommended)
+
+The `docker-compose.yml` file automatically sets up PostgreSQL:
+
+```bash
+# Start all services including PostgreSQL
+docker-compose up -d
+```
+
+### Option 2: Manual PostgreSQL Setup
+
+#### Install PostgreSQL
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+**CentOS/RHEL:**
+```bash
+sudo yum install postgresql postgresql-server
+sudo postgresql-setup initdb
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+**macOS:**
+```bash
+brew install postgresql
+brew services start postgresql
+```
+
+#### Run Database Setup Script
+
+```bash
+# Make the script executable
+chmod +x setup-databases.sh
+
+# Run the setup script
+./setup-databases.sh
+```
+
+#### Or Run SQL Manually
 
 ```sql
 -- Create databases
@@ -150,57 +207,24 @@ sudo ufw allow 443   # HTTPS
 
 ### Using Docker (Recommended)
 
-Create a `docker-compose.yml` file:
+The `docker-compose.yml` file is already created and includes PostgreSQL:
 
-```yaml
-version: '3.8'
+```bash
+# Start all services including PostgreSQL
+docker-compose up -d
 
-services:
-  pds:
-    build: ./packages/pds
-    ports:
-      - "2583:2583"
-    env_file:
-      - ./packages/pds/sfproject.env
-    volumes:
-      - ./data:/app/data
-      - ./blobs:/app/blobs
+# View logs
+docker-compose logs -f
 
-  bsky:
-    build: ./services/bsky
-    ports:
-      - "2584:2584"
-    env_file:
-      - ./services/bsky/sfproject.env
-
-  ozone:
-    build: ./packages/ozone
-    ports:
-      - "3000:3000"
-    env_file:
-      - ./packages/ozone/sfproject.env
-    depends_on:
-      - postgres
-
-  plc:
-    build: ./services/plc
-    ports:
-      - "2582:2582"
-    env_file:
-      - ./services/plc/sfproject.env
-    depends_on:
-      - postgres
-
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_PASSWORD: your-secure-password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
+# Stop services
+docker-compose down
 ```
+
+The Docker setup automatically:
+- Creates PostgreSQL database
+- Sets up required databases (ozone, plc)
+- Creates database user with proper permissions
+- Mounts persistent volumes for data storage
 
 ### Manual Deployment
 
