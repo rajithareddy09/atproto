@@ -14,8 +14,8 @@ RUN pnpm install
 # Copy the PDS service files
 COPY . .
 
-# Create data directory
-RUN mkdir -p /app/data && chown node /app/data
+# Create data directory and set permissions
+RUN mkdir -p /app/data && chown -R node:node /app/data
 
 VOLUME /app/data
 EXPOSE 2583

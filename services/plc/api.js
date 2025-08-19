@@ -34,7 +34,7 @@ app.get('/xrpc/com.atproto.server.describeServer', (req, res) => {
 app.post('/xrpc/com.atproto.identity.submitPlcOperation', (req, res) => {
   try {
     const { operation } = req.body;
-    
+
     if (!operation) {
       return res.status(400).json({ error: 'Missing operation parameter' });
     }
@@ -46,7 +46,7 @@ app.post('/xrpc/com.atproto.identity.submitPlcOperation', (req, res) => {
 
     // Generate operation ID
     const operationId = crypto.randomBytes(16).toString('hex');
-    
+
     // Store operation
     didOperations.set(operationId, {
       ...operation,
@@ -68,7 +68,7 @@ app.post('/xrpc/com.atproto.identity.submitPlcOperation', (req, res) => {
 app.get('/xrpc/com.atproto.identity.getPlcOperation', (req, res) => {
   try {
     const { operationId } = req.query;
-    
+
     if (!operationId) {
       return res.status(400).json({ error: 'Missing operationId parameter' });
     }
@@ -88,14 +88,14 @@ app.get('/xrpc/com.atproto.identity.getPlcOperation', (req, res) => {
 app.get('/xrpc/com.atproto.identity.resolveHandle', (req, res) => {
   try {
     const { handle } = req.query;
-    
+
     if (!handle) {
       return res.status(400).json({ error: 'Missing handle parameter' });
     }
 
     // Mock DID resolution
     const did = `did:web:${handle}.sfproject.net`;
-    
+
     res.json({
       did: did,
       handle: handle
@@ -109,14 +109,14 @@ app.get('/xrpc/com.atproto.identity.resolveHandle', (req, res) => {
 app.post('/xrpc/com.atproto.identity.updateHandle', (req, res) => {
   try {
     const { handle } = req.body;
-    
+
     if (!handle) {
       return res.status(400).json({ error: 'Missing handle parameter' });
     }
 
     // Mock handle update
     const operationId = crypto.randomBytes(16).toString('hex');
-    
+
     didOperations.set(operationId, {
       type: 'update_handle',
       did: `did:web:${handle}.sfproject.net`,
