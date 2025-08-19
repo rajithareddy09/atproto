@@ -33,11 +33,11 @@ function authenticateAdmin(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.OZONE_SIGNING_KEY_HEX || 'admin-secret-key');
     const adminUser = ADMIN_USERS.find(u => u.did === decoded.did);
-    
+
     if (!adminUser) {
       return res.status(403).json({ error: 'Admin access required' });
     }
-    
+
     req.admin = decoded;
     next();
   } catch (err) {
@@ -64,7 +64,7 @@ app.get('/xrpc/com.atproto.server.describeServer', (req, res) => {
 app.post('/xrpc/com.atproto.server.createSession', async (req, res) => {
   try {
     const { identifier, password } = req.body;
-    
+
     if (!identifier || !password) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -83,14 +83,14 @@ app.post('/xrpc/com.atproto.server.createSession', async (req, res) => {
 
     // Create session
     const accessJwt = jwt.sign(
-      { did: adminUser.did, role: 'admin' }, 
-      process.env.OZONE_SIGNING_KEY_HEX || 'admin-secret-key', 
+      { did: adminUser.did, role: 'admin' },
+      process.env.OZONE_SIGNING_KEY_HEX || 'admin-secret-key',
       { expiresIn: '1h' }
     );
-    
+
     const refreshJwt = jwt.sign(
-      { did: adminUser.did, role: 'admin' }, 
-      process.env.OZONE_SIGNING_KEY_HEX || 'admin-secret-key', 
+      { did: adminUser.did, role: 'admin' },
+      process.env.OZONE_SIGNING_KEY_HEX || 'admin-secret-key',
       { expiresIn: '7d' }
     );
 
@@ -109,7 +109,7 @@ app.post('/xrpc/com.atproto.server.createSession', async (req, res) => {
 app.get('/xrpc/com.atproto.moderation.queryReports', authenticateAdmin, (req, res) => {
   try {
     const { limit = 20, cursor } = req.query;
-    
+
     // Mock reports data
     const reports = {
       reports: [],
@@ -138,7 +138,7 @@ app.get('/xrpc/com.atproto.moderation.queryReports', authenticateAdmin, (req, re
 app.get('/xrpc/com.atproto.moderation.queryActions', authenticateAdmin, (req, res) => {
   try {
     const { limit = 20, cursor } = req.query;
-    
+
     // Mock actions data
     const actions = {
       actions: [],
@@ -169,14 +169,14 @@ app.get('/xrpc/com.atproto.moderation.queryActions', authenticateAdmin, (req, re
 app.post('/xrpc/com.atproto.moderation.emitEvent', authenticateAdmin, (req, res) => {
   try {
     const { event } = req.body;
-    
+
     if (!event) {
       return res.status(400).json({ error: 'Missing event parameter' });
     }
 
     // Mock event creation
     const eventId = crypto.randomBytes(16).toString('hex');
-    
+
     res.json({
       id: eventId,
       createdAt: new Date().toISOString()
