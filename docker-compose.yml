@@ -57,7 +57,9 @@ services:
 
   # PLC Service
   plc:
-    build: ./services/plc
+    build:
+      context: .
+      dockerfile: services/plc/Dockerfile
     container_name: sfproject-plc
     ports:
       - "2582:2582"
