@@ -588,6 +588,75 @@ app.get('/xrpc/app.bsky.actor.getSuggestions', (req, res) => {
   }
 });
 
+// 17. Get Popular Feed Generators
+app.get('/xrpc/app.bsky.unspecced.getPopularFeedGenerators', (req, res) => {
+  try {
+    const { limit = 10, cursor } = req.query;
+    
+    // Mock popular feed generators data
+    const feedGenerators = {
+      feeds: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock popular feed generators
+    const popularFeeds = [
+      {
+        name: 'whats-hot',
+        displayName: 'What\'s Hot',
+        description: 'Popular posts from the network',
+        descriptionFacets: []
+      },
+      {
+        name: 'following',
+        displayName: 'Following',
+        description: 'Posts from people you follow',
+        descriptionFacets: []
+      },
+      {
+        name: 'trending',
+        displayName: 'Trending',
+        description: 'Trending topics and posts',
+        descriptionFacets: []
+      },
+      {
+        name: 'tech-news',
+        displayName: 'Tech News',
+        description: 'Latest technology news and updates',
+        descriptionFacets: []
+      },
+      {
+        name: 'sports',
+        displayName: 'Sports',
+        description: 'Sports news and updates',
+        descriptionFacets: []
+      }
+    ];
+
+    // Limit the number of feeds returned
+    const limitedFeeds = popularFeeds.slice(0, Math.min(limit, popularFeeds.length));
+
+    feedGenerators.feeds = limitedFeeds.map((feed, index) => ({
+      uri: `at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/${feed.name}`,
+      cid: crypto.randomBytes(16).toString('hex'),
+      did: 'did:plc:z72i7hdynmk6r22z27h6tvur',
+      creator: 'did:plc:z72i7hdynmk6r22z27h6tvur',
+      displayName: feed.displayName,
+      description: feed.description,
+      descriptionFacets: feed.descriptionFacets,
+      avatar: null,
+      likeCount: Math.floor(Math.random() * 1000) + 100,
+      viewer: null,
+      indexedAt: new Date().toISOString()
+    }));
+
+    res.json(feedGenerators);
+  } catch (error) {
+    console.error('Error in getPopularFeedGenerators:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'bsky', timestamp: new Date().toISOString() });
