@@ -6,6 +6,34 @@ const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+
+// Helper function to create a mock post object
+function createMockPost(index, authorDid, authorHandle, authorDisplayName, postText) {
+  return {
+    uri: `at://${authorDid}/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+    cid: crypto.randomBytes(16).toString('hex'),
+    author: {
+      did: authorDid,
+      handle: authorHandle,
+      displayName: authorDisplayName,
+      avatar: null,
+      indexedAt: new Date().toISOString()
+    },
+    record: {
+      text: postText || `This is a mock post ${index}.`,
+      createdAt: new Date().toISOString()
+    },
+    replyCount: Math.floor(Math.random() * 100),
+    repostCount: Math.floor(Math.random() * 50),
+    likeCount: Math.floor(Math.random() * 200),
+    indexedAt: new Date().toISOString(),
+    viewer: {
+      repost: null,
+      like: null
+    },
+    labels: []
+  };
+}
 const path = require('path');
 
 const app = express();
@@ -471,8 +499,9 @@ app.get('/xrpc/app.bsky.feed.getAuthorFeed', (req, res) => {
 
     // Generate mock posts
     for (let i = 0; i < Math.min(limit, 20); i++) {
+      const mockPost = createMockPost(i, actor, actor, `Author ${i}`, `This is a PDS author feed post ${i}`);
       feed.feed.push({
-        post: `at://${actor}/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        post: mockPost,
         reply: null,
         repost: null,
         like: null,

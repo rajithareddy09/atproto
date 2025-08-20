@@ -10,6 +10,48 @@ const crypto = require('crypto');
 const app = express();
 const port = process.env.BSKY_PORT || 2584;
 
+// Helper function to create a mock post object
+function createMockPost(index, authorDid, authorHandle, authorDisplayName, postText) {
+  return {
+    uri: `at://${authorDid}/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+    cid: crypto.randomBytes(16).toString('hex'),
+    author: {
+      did: authorDid,
+      handle: authorHandle,
+      displayName: authorDisplayName,
+      avatar: null,
+      indexedAt: new Date().toISOString()
+    },
+    record: {
+      text: postText || `This is a mock post ${index}.`,
+      createdAt: new Date().toISOString()
+    },
+    replyCount: Math.floor(Math.random() * 100),
+    repostCount: Math.floor(Math.random() * 50),
+    likeCount: Math.floor(Math.random() * 200),
+    indexedAt: new Date().toISOString(),
+    viewer: {
+      repost: null,
+      like: null
+    },
+    labels: []
+  };
+}
+
+// Helper function to generate proper cursor for pagination
+function generateCursor(currentCursor, limit, totalAvailable) {
+  // If there's a current cursor, generate a next one
+  if (currentCursor) {
+    return `next-${Date.now()}`;
+  }
+  // If there are more items available than the limit, provide a cursor
+  if (limit < totalAvailable) {
+    return `next-${Date.now()}`;
+  }
+  // No more items available
+  return undefined;
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -78,13 +120,14 @@ app.get('/xrpc/app.bsky.feed.getTimeline', (req, res) => {
     // Mock timeline data
     const timeline = {
       feed: [],
-      cursor: cursor ? `next-${Date.now()}` : undefined
+      cursor: generateCursor(cursor, limit, 20)
     };
 
     // Generate mock posts
     for (let i = 0; i < Math.min(limit, 20); i++) {
+      const mockPost = createMockPost(i, `did:web:user${i}.sfproject.net`, `user${i}.sfproject.net`, `User ${i}`, `This is a timeline post ${i}`);
       timeline.feed.push({
-        post: `at://did:web:user${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        post: mockPost,
         reply: null,
         repost: null,
         like: null,
@@ -150,8 +193,9 @@ app.get('/xrpc/app.bsky.feed.getAuthorFeed', (req, res) => {
 
     // Generate mock posts for the author
     for (let i = 0; i < Math.min(limit, 20); i++) {
+      const mockPost = createMockPost(i, actor, actor, `Author ${i}`, `This is an author feed post ${i}`);
       feed.feed.push({
-        post: `at://${actor}/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        post: mockPost,
         reply: null,
         repost: null,
         like: null,
@@ -364,8 +408,9 @@ app.get('/xrpc/app.bsky.feed.getFeed', (req, res) => {
 
     // Generate mock posts for the feed
     for (let i = 0; i < Math.min(limit, 30); i++) {
+      const mockPost = createMockPost(i, `did:web:user${i}.sfproject.net`, `user${i}.sfproject.net`, `User ${i}`, `This is a feed post ${i}`);
       feedData.feed.push({
-        post: `at://did:web:user${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        post: mockPost,
         reply: null,
         repost: null,
         like: null,
@@ -1093,8 +1138,9 @@ app.get('/xrpc/app.bsky.actor.getActorLikes', (req, res) => {
 
     // Generate mock likes
     for (let i = 0; i < Math.min(limit, 20); i++) {
+      const mockPost = createMockPost(i, `did:web:user${i}.sfproject.net`, `user${i}.sfproject.net`, `User ${i}`, `This is a liked post ${i}`);
       likes.feed.push({
-        post: `at://did:web:user${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        post: mockPost,
         reply: null,
         repost: null,
         like: {
@@ -1130,8 +1176,9 @@ app.get('/xrpc/app.bsky.actor.getActorReposts', (req, res) => {
 
     // Generate mock reposts
     for (let i = 0; i < Math.min(limit, 20); i++) {
+      const mockPost = createMockPost(i, `did:web:user${i}.sfproject.net`, `user${i}.sfproject.net`, `User ${i}`, `This is a reposted post ${i}`);
       reposts.feed.push({
-        post: `at://did:web:user${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        post: mockPost,
         reply: null,
         repost: {
           uri: `at://did:web:user${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
@@ -1835,13 +1882,14 @@ app.get('/xrpc/app.bsky.unspecced.getPopular', (req, res) => {
     // Mock popular content
     const popular = {
       feed: [],
-      cursor: cursor ? `next-${Date.now()}` : undefined
+      cursor: generateCursor(cursor, limit, 20)
     };
 
     // Generate mock popular posts
     for (let i = 0; i < Math.min(limit, 20); i++) {
+      const mockPost = createMockPost(i, `did:web:popular${i}.sfproject.net`, `popular${i}.sfproject.net`, `Popular User ${i}`, `This is a popular post ${i}`);
       popular.feed.push({
-        post: `at://did:web:popular${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        post: mockPost,
         reply: null,
         repost: null,
         like: null,
@@ -1864,7 +1912,7 @@ app.get('/xrpc/app.bsky.unspecced.getPopularFeedGenerators', (req, res) => {
     // Mock popular feed generators
     const generators = {
       feeds: [],
-      cursor: cursor ? `next-${Date.now()}` : undefined
+      cursor: generateCursor(cursor, limit, popularFeeds.length)
     };
 
     // Generate mock feed generators
