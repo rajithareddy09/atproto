@@ -127,33 +127,72 @@ app.get('/xrpc/app.bsky.feed.getAuthorFeed', (req, res) => {
 // 5. Get Labeler Services
 app.get('/xrpc/app.bsky.labeler.getServices', (req, res) => {
   try {
-    const { dids } = req.query;
+    // Handle multiple dids parameters (Express provides them as an array)
+    const dids = Array.isArray(req.query.dids) ? req.query.dids : [req.query.dids];
+    const detailed = req.query.detailed === 'true';
 
-    if (!dids) {
+    if (!dids || dids.length === 0) {
       return res.status(400).json({ error: 'Missing dids parameter' });
     }
 
-    // Parse DIDs from comma-separated string
-    const didList = dids.split(',').map(did => did.trim());
+    // Filter out undefined values and create unique list
+    const didList = [...new Set(dids.filter(did => did))];
 
     // Mock labeler services data
     const services = {
-      views: didList.map(did => ({
-        uri: did,
-        cid: crypto.randomBytes(16).toString('hex'),
-        did: did,
-        creator: did,
-        displayName: 'SF Project Labeler',
-        description: 'Content labeling service for SF Project',
-        descriptionFacets: [],
-        avi: null,
-        labels: [],
-        indexedAt: new Date().toISOString()
-      }))
+      views: didList.map(did => {
+        const baseService = {
+          uri: did,
+          cid: crypto.randomBytes(16).toString('hex'),
+          did: did,
+          creator: did,
+          displayName: 'SF Project Labeler',
+          description: 'Content labeling service for SF Project',
+          descriptionFacets: [],
+          avi: null,
+          labels: [],
+          indexedAt: new Date().toISOString()
+        };
+
+        // Add detailed information if requested
+        if (detailed) {
+          baseService.labels = [
+            {
+              src: did,
+              uri: `at://did:web:user.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+              cid: crypto.randomBytes(16).toString('hex'),
+              val: 'porn',
+              neg: false,
+              cts: new Date().toISOString()
+            },
+            {
+              src: did,
+              uri: `at://did:web:user.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+              cid: crypto.randomBytes(16).toString('hex'),
+              val: 'hate',
+              neg: false,
+              cts: new Date().toISOString()
+            }
+          ];
+          baseService.descriptionFacets = [
+            {
+              features: [
+                {
+                  $type: 'app.bsky.richtext.facet#link',
+                  uri: 'https://sfproject.net/labels'
+                }
+              ]
+            }
+          ];
+        }
+
+        return baseService;
+      })
     };
 
     res.json(services);
   } catch (error) {
+    console.error('Error in labeler getServices:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -250,6 +289,300 @@ app.get('/xrpc/app.bsky.actor.searchActors', (req, res) => {
     }
 
     res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 9. Get Feed (Feed Generator)
+app.get('/xrpc/app.bsky.feed.getFeed', (req, res) => {
+  try {
+    const { feed, limit = 30, cursor } = req.query;
+
+    if (!feed) {
+      return res.status(400).json({ error: 'Missing feed parameter' });
+    }
+
+    // Parse feed URI to determine feed type
+    const feedUri = feed;
+    let feedName = 'Custom Feed';
+    
+    if (feedUri.includes('whats-hot')) {
+      feedName = 'What\'s Hot';
+    } else if (feedUri.includes('following')) {
+      feedName = 'Following';
+    } else if (feedUri.includes('trending')) {
+      feedName = 'Trending';
+    }
+
+    // Mock feed data
+    const feedData = {
+      feed: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock posts for the feed
+    for (let i = 0; i < Math.min(limit, 30); i++) {
+      feedData.feed.push({
+        post: `at://did:web:user${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        reply: null,
+        repost: null,
+        like: null,
+        feedContext: {
+          feed: feedUri,
+          feedName: feedName
+        },
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(feedData);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 10. Get Notifications
+app.get('/xrpc/app.bsky.notification.listNotifications', (req, res) => {
+  try {
+    const { limit = 20, cursor } = req.query;
+    
+    // Mock notifications data
+    const notifications = {
+      notifications: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock notifications
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      notifications.notifications.push({
+        uri: `at://did:web:user${i}.sfproject.net/app.bsky.feed.post/${crypto.randomBytes(16).toString('hex')}`,
+        cid: crypto.randomBytes(16).toString('hex'),
+        author: {
+          did: `did:web:user${i}.sfproject.net`,
+          handle: `user${i}.sfproject.net`
+        },
+        reason: 'follow',
+        reasonSubject: null,
+        record: {
+          text: 'Mock notification content'
+        },
+        isRead: false,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 11. Get Preferences
+app.get('/xrpc/app.bsky.actor.getPreferences', (req, res) => {
+  try {
+    // Mock preferences data
+    const preferences = {
+      preferences: [
+        {
+          $type: 'app.bsky.actor.defs#adultContentPref',
+          enabled: false
+        },
+        {
+          $type: 'app.bsky.actor.defs#contentLabelPref',
+          label: 'hide',
+          visibility: 'hide'
+        }
+      ]
+    };
+
+    res.json(preferences);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 12. Get Follows
+app.get('/xrpc/app.bsky.graph.getFollows', (req, res) => {
+  try {
+    const { actor, limit = 20, cursor } = req.query;
+    
+    if (!actor) {
+      return res.status(400).json({ error: 'Missing actor parameter' });
+    }
+
+    // Mock follows data
+    const follows = {
+      subject: {
+        did: actor,
+        handle: actor.split(':').pop() || actor
+      },
+      follows: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock follows
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      follows.follows.push({
+        did: `did:web:user${i}.sfproject.net`,
+        handle: `user${i}.sfproject.net`,
+        displayName: `User ${i}`,
+        avatar: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(follows);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 13. Get Followers
+app.get('/xrpc/app.bsky.graph.getFollowers', (req, res) => {
+  try {
+    const { actor, limit = 20, cursor } = req.query;
+    
+    if (!actor) {
+      return res.status(400).json({ error: 'Missing actor parameter' });
+    }
+
+    // Mock followers data
+    const followers = {
+      subject: {
+        did: actor,
+        handle: actor.split(':').pop() || actor
+      },
+      followers: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock followers
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      followers.followers.push({
+        did: `did:web:follower${i}.sfproject.net`,
+        handle: `follower${i}.sfproject.net`,
+        displayName: `Follower ${i}`,
+        avatar: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(followers);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 14. Get Unspecced Config
+app.get('/xrpc/app.bsky.unspecced.getConfig', (req, res) => {
+  try {
+    // Mock unspecced configuration data
+    const config = {
+      feeds: {
+        'whats-hot': {
+          uri: 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot',
+          cid: crypto.randomBytes(16).toString('hex'),
+          did: 'did:plc:z72i7hdynmk6r22z27h6tvur',
+          creator: 'did:plc:z72i7hdynmk6r22z27h6tvur',
+          displayName: 'What\'s Hot',
+          description: 'Popular posts from the network',
+          descriptionFacets: [],
+          avatar: null,
+          likeCount: Math.floor(Math.random() * 1000),
+          viewer: null,
+          indexedAt: new Date().toISOString()
+        },
+        'following': {
+          uri: 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/following',
+          cid: crypto.randomBytes(16).toString('hex'),
+          did: 'did:plc:z72i7hdynmk6r22z27h6tvur',
+          creator: 'did:plc:z72i7hdynmk6r22z27h6tvur',
+          displayName: 'Following',
+          description: 'Posts from people you follow',
+          descriptionFacets: [],
+          avatar: null,
+          likeCount: Math.floor(Math.random() * 1000),
+          viewer: null,
+          indexedAt: new Date().toISOString()
+        }
+      },
+      labels: {
+        enabled: true,
+        providers: ['did:web:labeler.sfproject.net']
+      },
+      moderation: {
+        enabled: true,
+        providers: ['did:web:ozone.sfproject.net']
+      },
+      features: {
+        'com.atproto.labeler.defs#selfLabels': true,
+        'com.atproto.unspecced.defs#taggedSuggestions': true,
+        'app.bsky.actor.defs#adultContentPref': true,
+        'app.bsky.actor.defs#contentLabelPref': true
+      }
+    };
+
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 15. Get Tagged Suggestions
+app.get('/xrpc/com.atproto.unspecced.getTaggedSuggestions', (req, res) => {
+  try {
+    // Mock tagged suggestions data
+    const suggestions = {
+      suggestions: [
+        {
+          tag: 'tech',
+          subjectType: 'com.atproto.unspecced.defs#suggestionSubject',
+          subject: 'did:web:tech.sfproject.net'
+        },
+        {
+          tag: 'news',
+          subjectType: 'com.atproto.unspecced.defs#suggestionSubject',
+          subject: 'did:web:news.sfproject.net'
+        },
+        {
+          tag: 'sports',
+          subjectType: 'com.atproto.unspecced.defs#suggestionSubject',
+          subject: 'did:web:sports.sfproject.net'
+        }
+      ]
+    };
+
+    res.json(suggestions);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 16. Get Suggested Follows
+app.get('/xrpc/app.bsky.actor.getSuggestions', (req, res) => {
+  try {
+    const { limit = 20, cursor } = req.query;
+    
+    // Mock suggestions data
+    const suggestions = {
+      actors: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock suggestions
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      suggestions.actors.push({
+        did: `did:web:suggested${i}.sfproject.net`,
+        handle: `suggested${i}.sfproject.net`,
+        displayName: `Suggested User ${i}`,
+        description: 'A suggested user to follow',
+        avatar: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(suggestions);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
