@@ -26,6 +26,13 @@ COPY lexicons ./lexicons
 COPY packages/*/dist ./packages/*/dist
 COPY services/*/dist ./services/*/dist
 
+# Install service-specific dependencies (including pg for PDS)
+WORKDIR /app/services/pds
+RUN pnpm install
+
+# Return to app root
+WORKDIR /app
+
 # Create data directory and set permissions
 RUN mkdir -p /app/data && chown -R node:node /app/data
 
