@@ -18,7 +18,9 @@ services:
 
   # PDS Service
   pds:
-    build: ./services/pds
+    build:
+      context: .
+      dockerfile: ./services/pds/Dockerfile
     container_name: sfproject-pds
     ports:
       - "2583:2583"
@@ -33,7 +35,9 @@ services:
 
   # Bsky AppView Service
   bsky:
-    build: ./services/bsky
+    build:
+      context: .
+      dockerfile: ./services/bsky/Dockerfile
     container_name: sfproject-bsky
     ports:
       - "2584:2584"
@@ -45,7 +49,9 @@ services:
 
   # Ozone Moderation Service
   ozone:
-    build: ./services/ozone
+    build:
+      context: .
+      dockerfile: ./packages/ozone/Dockerfile
     container_name: sfproject-ozone
     ports:
       - "3000:3000"
@@ -57,7 +63,9 @@ services:
 
   # PLC Service
   plc:
-    build: ./services/plc
+    build:
+      context: .
+      dockerfile: ./services/plc/Dockerfile
     container_name: sfproject-plc
     ports:
       - "2582:2582"
