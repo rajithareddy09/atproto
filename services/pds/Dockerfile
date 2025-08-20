@@ -5,25 +5,25 @@ RUN apk add --update dumb-init
 WORKDIR /app
 
 # Copy workspace files first
-COPY ../../package.json ./
-COPY ../../pnpm-workspace.yaml ./
-COPY ../../pnpm-lock.yaml ./
+COPY package.json ./
+COPY pnpm-workspace.yaml ./
+COPY pnpm-lock.yaml ./
 
 # Copy all package.json files from workspace
-COPY ../../packages/*/package.json ./packages/
-COPY ../../services/*/package.json ./services/
+COPY packages/*/package.json ./packages/
+COPY services/*/package.json ./services/
 
 # Install dependencies
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
 
 # Copy the entire workspace source
-COPY ../../packages ./packages
-COPY ../../services ./services
-COPY ../../lexicons ./lexicons
+COPY packages ./packages
+COPY services ./services
+COPY lexicons ./lexicons
 
-# Build the workspace
-RUN pnpm build
+# Build the workspace (with error handling)
+RUN pnpm build || (echo "Build failed, checking for errors..." && exit 1)
 
 # Create data directory and set permissions
 RUN mkdir -p /app/data && chown -R node:node /app/data
