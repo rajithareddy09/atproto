@@ -51,12 +51,12 @@ services:
   ozone:
     build:
       context: .
-      dockerfile: ./packages/ozone/Dockerfile
+      dockerfile: ./services/ozone/Dockerfile
     container_name: sfproject-ozone
     ports:
       - "3000:3000"
     env_file:
-      - ./packages/ozone/sfproject.env
+      - ./services/ozone/sfproject.env
     depends_on:
       - postgres
     restart: unless-stopped
