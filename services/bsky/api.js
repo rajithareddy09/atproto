@@ -124,6 +124,137 @@ app.get('/xrpc/app.bsky.feed.getAuthorFeed', (req, res) => {
   }
 });
 
+// 5. Get Labeler Services
+app.get('/xrpc/app.bsky.labeler.getServices', (req, res) => {
+  try {
+    const { dids } = req.query;
+
+    if (!dids) {
+      return res.status(400).json({ error: 'Missing dids parameter' });
+    }
+
+    // Parse DIDs from comma-separated string
+    const didList = dids.split(',').map(did => did.trim());
+
+    // Mock labeler services data
+    const services = {
+      views: didList.map(did => ({
+        uri: did,
+        cid: crypto.randomBytes(16).toString('hex'),
+        did: did,
+        creator: did,
+        displayName: 'SF Project Labeler',
+        description: 'Content labeling service for SF Project',
+        descriptionFacets: [],
+        avi: null,
+        labels: [],
+        indexedAt: new Date().toISOString()
+      }))
+    };
+
+    res.json(services);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 6. Get Post Thread
+app.get('/xrpc/app.bsky.feed.getPostThread', (req, res) => {
+  try {
+    const { uri } = req.query;
+
+    if (!uri) {
+      return res.status(400).json({ error: 'Missing URI parameter' });
+    }
+
+    // Mock thread data
+    const thread = {
+      thread: {
+        post: {
+          uri: uri,
+          cid: crypto.randomBytes(16).toString('hex'),
+          author: {
+            did: 'did:web:user.sfproject.net',
+            handle: 'user.sfproject.net'
+          },
+          record: {
+            text: 'This is a mock post from the Bsky AppView service',
+            createdAt: new Date().toISOString()
+          },
+          indexedAt: new Date().toISOString()
+        },
+        replies: []
+      }
+    };
+
+    res.json(thread);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 7. Get Actor Profile
+app.get('/xrpc/app.bsky.actor.getProfile', (req, res) => {
+  try {
+    const { actor } = req.query;
+
+    if (!actor) {
+      return res.status(400).json({ error: 'Missing actor parameter' });
+    }
+
+    // Mock profile data
+    const profile = {
+      did: actor.startsWith('did:') ? actor : `did:web:${actor}.sfproject.net`,
+      handle: actor.startsWith('did:') ? actor.split(':').pop() : actor,
+      displayName: `User ${actor}`,
+      description: 'A user on SF Project Bsky',
+      avatar: null,
+      banner: null,
+      followsCount: Math.floor(Math.random() * 100),
+      followersCount: Math.floor(Math.random() * 100),
+      postsCount: Math.floor(Math.random() * 50),
+      indexedAt: new Date().toISOString()
+    };
+
+    res.json(profile);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 8. Search Actors
+app.get('/xrpc/app.bsky.actor.searchActors', (req, res) => {
+  try {
+    const { q, limit = 20, cursor } = req.query;
+
+    if (!q) {
+      return res.status(400).json({ error: 'Missing query parameter' });
+    }
+
+    // Mock search results
+    const results = {
+      actors: [],
+      cursor: cursor ? `next-${Date.now()}` : undefined
+    };
+
+    // Generate mock search results
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      results.actors.push({
+        did: `did:web:search${i}.sfproject.net`,
+        handle: `search${i}.sfproject.net`,
+        displayName: `Search Result ${i}`,
+        description: `User matching "${q}"`,
+        avatar: null,
+        indexedAt: new Date().toISOString()
+      });
+    }
+
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'bsky', timestamp: new Date().toISOString() });
