@@ -648,6 +648,16 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'pds', timestamp: new Date().toISOString() });
 });
 
+// AT Protocol health check endpoint (what the social app expects)
+app.get('/xrpc/_health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    service: 'pds', 
+    timestamp: new Date().toISOString(),
+    version: '0.0.1'
+  });
+});
+
 // DID document endpoint
 app.get('/.well-known/did.json', (req, res) => {
   res.json({
