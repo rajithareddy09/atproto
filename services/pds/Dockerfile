@@ -38,7 +38,7 @@ ENV NODE_ENV=production
 ENTRYPOINT ["dumb-init", "--"]
 
 USER node
-CMD ["node", "--enable-source-maps", "index.js"]
+CMD ["node", "--enable-source-maps", "services/pds/index.js"]
 
 LABEL org.opencontainers.image.description="ATP Personal Data Server (PDS)"
 LABEL org.opencontainers.image.licenses=MIT

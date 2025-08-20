@@ -34,7 +34,7 @@ ENV NODE_ENV=production
 ENTRYPOINT ["dumb-init", "--"]
 
 USER node
-CMD ["node", "--enable-source-maps", "api.js"]
+CMD ["node", "--enable-source-maps", "services/plc/api.js"]
 
 LABEL org.opencontainers.image.description="ATP Personal Lifecycle Controller (PLC)"
 LABEL org.opencontainers.image.licenses=MIT

@@ -34,7 +34,7 @@ ENV NODE_ENV=production
 ENTRYPOINT ["dumb-init", "--"]
 
 USER node
-CMD ["node", "--enable-source-maps", "api.js"]
+CMD ["node", "--enable-source-maps", "services/ozone/api.js"]
 
 LABEL org.opencontainers.image.description="Ozone Moderation Service"
 LABEL org.opencontainers.image.licenses=MIT
