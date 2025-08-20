@@ -22,8 +22,9 @@ COPY packages ./packages
 COPY services ./services
 COPY lexicons ./lexicons
 
-# Build the workspace (with error handling)
-RUN pnpm build || (echo "Build failed, checking for errors..." && exit 1)
+# Copy pre-built dist files instead of building
+COPY packages/*/dist ./packages/*/dist
+COPY services/*/dist ./services/*/dist
 
 # Create data directory and set permissions
 RUN mkdir -p /app/data && chown -R node:node /app/data
