@@ -26,9 +26,9 @@ COPY lexicons ./lexicons
 COPY packages/*/dist ./packages/*/dist
 COPY services/*/dist ./services/*/dist
 
-# Install service-specific dependencies (including pg for PDS)
+# Install service-specific dependencies using npm
 WORKDIR /app/services/pds
-RUN pnpm install
+RUN npm install
 
 # Return to app root
 WORKDIR /app

@@ -26,6 +26,13 @@ COPY lexicons ./lexicons
 COPY packages/*/dist ./packages/*/dist
 COPY services/*/dist ./services/*/dist
 
+# Install service-specific dependencies using npm
+WORKDIR /app/services/plc
+RUN npm install
+
+# Return to app root
+WORKDIR /app
+
 EXPOSE 2582
 ENV PORT=2582
 ENV NODE_ENV=production

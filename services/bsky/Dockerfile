@@ -26,6 +26,13 @@ COPY lexicons ./lexicons
 COPY packages/*/dist ./packages/*/dist
 COPY services/*/dist ./services/*/dist
 
+# Install service-specific dependencies using npm
+WORKDIR /app/services/bsky
+RUN npm install
+
+# Return to app root
+WORKDIR /app
+
 EXPOSE 2584
 ENV BSKY_PORT=2584
 ENV NODE_ENV=production

@@ -26,6 +26,13 @@ COPY lexicons ./lexicons
 COPY packages/*/dist ./packages/*/dist
 COPY services/*/dist ./services/*/dist
 
+# Install service-specific dependencies using npm
+WORKDIR /app/services/ozone
+RUN npm install
+
+# Return to app root
+WORKDIR /app
+
 EXPOSE 3000
 ENV OZONE_PORT=3000
 ENV NODE_ENV=production
